@@ -2,7 +2,7 @@
 
 This repository contains the implementation of a speech enhancement system using classical filters (Wiener, subtraction) and mask-based deep learning methods.
 
-## 📂 Project Structure
+# Project Structure
 speech-enhance-mask/
 ├── data/ # Folder for input/output audio
 │ ├── clean/ # Clean speech samples
@@ -22,38 +22,35 @@ speech-enhance-mask/
 ├── requirements.txt # Python dependencies
 └── README.md # Project documentation
 
-## 🚀 Quick Start
 
-
-1.Create a virtual environment
+# 1.Create a virtual environment
 
 python -m venv .venv
 source .venv/bin/activate     # Mac/Linux
 .venv\Scripts\activate        # Windows
-Install dependencies
+
+# 2.Install dependencies
 
 pip install -r requirements.txt
 
-
-Run smoke test
+# 3.Run smoke test
 
 python scripts/smoke_test.py
 
-
-Run noise test
+# 4.Run noise test
 
 python scripts/noise_test.py
 
-
-Evaluate models
+# 5.Evaluate models
 
 python scripts/eval_wiener.py
 python scripts/eval_mask.py
 
-
-Train DNN mask model (optional)
+# 6.Train DNN mask model 
 
 python scripts/train_mask.py
+
+# Metrics
 We evaluate using:
 
 SNR (dB) – Signal-to-noise ratio
@@ -62,7 +59,7 @@ PESQ – Perceptual evaluation of speech quality
 
 STOI – Short-time objective intelligibility
 
-👨‍💻 Author
+# Author
 
 Project for ELEC5305 Speech Processing, University of Sydney.
-Maintainer: Derrick927
+Maintainer: Zechen Li
