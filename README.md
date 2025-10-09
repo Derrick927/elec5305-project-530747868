@@ -24,11 +24,8 @@ speech-enhance-mask/
 
 ## 🚀 Quick Start
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/yourname/elec5305-project.git
-   cd elec5305-project
-Create a virtual environment
+
+1.Create a virtual environment
 
 python -m venv .venv
 source .venv/bin/activate     # Mac/Linux
