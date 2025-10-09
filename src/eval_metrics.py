@@ -4,17 +4,20 @@ from pathlib import Path
 from src.utils import load_wav, snr_db
 
 # PESQ / STOI
-from pesq import pesq            # pip 已装：pesq
-from pystoi.stoi import stoi     # pip 已装：pystoi
+from pesq import pesq        # pip install pesq
+from pystoi.stoi import stoi # pip install pystoi
 
 SR = 16000
 
 def _align(a: np.ndarray, b: np.ndarray):
+    """Align two signals to the same length"""
     L = min(len(a), len(b))
     return a[:L], b[:L]
 
-def eval_pair(clean_path: str, test_path: str, sr: int = SR):
-    """对一对音频(参考clean vs 待评test)计算 SNR/PESQ/STOI"""
+def eval_pair(clean_path: str, test_path: str, sr: int, init_sr = SR):
+    """
+    Pairwise evaluation (clean vs. test signal): compute SNR / PESQ / STOI
+    """
     c, _ = load_wav(clean_path, sr)
     t, _ = load_wav(test_path, sr)
     c, t = _align(c, t)
@@ -22,7 +25,7 @@ def eval_pair(clean_path: str, test_path: str, sr: int = SR):
     # SNR
     snr = snr_db(c, t)
 
-    # PESQ（宽带 16kHz），有时可能因幅度/长度报错，做保护
+    # PESQ (wideband 16 kHz). May sometimes throw errors due to amplitude/length mismatch.
     try:
         pesq_wb = pesq(sr, c, t, 'wb')
     except Exception:

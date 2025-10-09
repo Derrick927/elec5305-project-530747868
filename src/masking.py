@@ -4,37 +4,51 @@ from src.stft import stft, istft
 
 def ideal_ratio_mask(clean, noisy, eps=1e-12):
     """
-    计算 IRM = |S| / (|S| + |N|)
-    参数:
-      clean: 干净语音波形
-      noisy: 带噪语音波形 (clean + noise)
-    返回:
-      掩蔽后的增强语音时域信号
+    Calculate IRM = |S| / (|S| + |N|)
+    Args:
+        clean: clean speech waveform
+        noisy: noisy speech waveform (clean + noise)
+    Returns:
+        Enhanced speech signal in time domain
     """
     # STFT
     S = stft(clean)
     Y = stft(noisy)
-    # 估计噪声谱: N = Y - S
+
+    # Estimate noise: N = Y - S
     N = Y - S
 
     mag_S = np.abs(S)
     mag_N = np.abs(N)
 
-    # IRM (0~1)
+    # IRM (values in 0–1)
     M = mag_S / (mag_S + mag_N + eps)
 
-    # 应用在带噪幅度上（用带噪相位）
+    # Apply IRM mask with noisy phase
     mag_hat = M * np.abs(Y)
     X_hat = mag_hat * np.exp(1j * np.angle(Y))
-    x_hat = istft(X_hat)
-    return x_hat
+    X_hat = istft(X_hat)
+    return X_hat
+
 
 def ideal_binary_mask(clean, noisy, thresh=0.5, eps=1e-12):
     """
-    可选：理想二值掩蔽 IBM（更激进，听感可能更脆，但对比用）
+    Calculate IBM (binary mask)
+    Args:
+        clean: clean speech waveform
+        noisy: noisy speech waveform (clean + noise)
+        thresh: threshold (default=0.5)
+    Returns:
+        Enhanced speech signal in time domain
     """
-    S = stft(clean); Y = stft(noisy); N = Y - S
-    M = (np.abs(S) > (np.abs(N) + eps)).astype(np.float32)  # True=1, False=0
+    S = stft(clean)
+    Y = stft(noisy)
+    N = Y - S
+
+    # IBM: 1 if speech > noise*threshold, else 0
+    M = (np.abs(S) > (np.abs(N) + eps) * thresh).astype(np.float32)
+
     mag_hat = M * np.abs(Y)
     X_hat = mag_hat * np.exp(1j * np.angle(Y))
     return istft(X_hat)
+

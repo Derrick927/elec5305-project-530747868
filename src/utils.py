@@ -6,7 +6,7 @@ SR = 16000
 
 def load_wav(path: str, sr: int = SR):
     x, orig_sr = sf.read(path, always_2d=False)
-    if x.ndim > 1:  # 立体声转单声道
+    if x.ndim > 1:  # Stereo to mono
         x = np.mean(x, axis=1)
     if orig_sr != sr:
         x = librosa.resample(x, orig_sr=orig_sr, target_sr=sr)
