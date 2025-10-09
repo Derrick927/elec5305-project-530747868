@@ -7,8 +7,8 @@ from src.eval_metrics import eval_pair
 
 CLEAN    = "data/clean/example.wav"
 NOISY    = "data/noisy/example_noisy.wav"
-SUBTRACT = "results/example_denoised.wav"   # 谱减法结果
-WIENER   = "results/example_wiener.wav"     # Wiener 结果
+SUBTRACT = "results/example_denoised.wav"   # Spectral subtraction results
+WIENER   = "results/example_wiener.wav"     # Wiener results
 
 def main():
     for p in [CLEAN, NOISY, WIENER]:

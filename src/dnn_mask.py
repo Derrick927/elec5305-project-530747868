@@ -1,13 +1,13 @@
 # src/dnn_mask.py
 import torch
 import torch.nn as nn
-import torch.nn.functional as F  # 不要用变量名覆盖 F
+import torch.nn.functional as F  # avoid overriding variable names with F
 
 class MaskNet(nn.Module):
     """
-    极简全连接掩蔽网络（非延迟构建版）：
-    - 构造时显式传入频率维 in_dim（例如 513）
-    - 输入一帧幅度谱，输出同维度 [0,1] 掩蔽
+    Simple fully connected masking network (non-causal version).
+    - Input: magnitude spectrogram with frequency dimension `in_dim` (e.g., 513)
+    - Output: same dimension mask in range [0, 1]
     """
     def __init__(self, in_dim: int):
         super().__init__()
@@ -18,10 +18,17 @@ class MaskNet(nn.Module):
 
     def forward(self, mag: torch.Tensor):
         """
-        mag: (B, T, Fdim)
-        return: (B, T, Fdim) 掩蔽 [0,1]
+        Args:
+            mag: Tensor of shape (B, T, Fdim)
+        Returns:
+            Tensor of shape (B, T, Fdim), mask in [0, 1]
         """
         B, T, Fdim = mag.shape
-        assert Fdim == self.in_dim, f"频率维不一致: got {Fdim}, expect {self.in_dim}"
-        x = mag.reshape(-1, Fdim)       # (B*T, Fdim)
+        assert Fdim == self.in_dim, f"Frequency dimension mismatch: got {Fdim}, expected {self.in_dim}"
+
+        x = mag.reshape(-1, Fdim)   # (B*T, Fdim)
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = torch.sigmoid(self.fc3(x))
+        return x.reshape(B, T, Fdim)   # reshape back to (B, T, Fdim)
+

@@ -7,9 +7,9 @@ from src.eval_metrics import eval_pair
 
 CLEAN     = "data/clean/example.wav"
 NOISY     = "data/noisy/example_noisy.wav"
-SUBTRACT  = "results/example_denoised.wav"   # 谱减法
+SUBTRACT  = "results/example_denoised.wav"   # Spectral subtraction
 WIENER    = "results/example_wiener.wav"     # Wiener
-MASK_IRM  = "results/example_mask_irm.wav"   # IRM 掩蔽（本步）
+MASK_IRM  = "results/example_mask_irm.wav"   # IRM masking
 
 def maybe_eval(name, ref, test):
     p = Path(test)
@@ -34,7 +34,7 @@ def main():
     for name, metrics in items:
         print(f"[{name.upper():9s}]", r(metrics))
 
-    # 写 CSV
+    # CSV
     out = Path("results/metrics.csv")
     with open(out, "w", newline="") as f:
         w = csv.writer(f); w.writerow(["type","snr_db","pesq_wb","stoi"])
