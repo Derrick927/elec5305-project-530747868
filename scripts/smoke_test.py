@@ -5,7 +5,7 @@ from pathlib import Path
 from src.utils import load_wav, save_wav, snr_db
 from src.stft import stft, istft
 
-in_path = Path("data/clean/example.wav") 
+in_path = Path("data/clean/example.wav")
 assert in_path.exists(), f"File not found: {in_path}"
 
 x, sr = load_wav(str(in_path))
