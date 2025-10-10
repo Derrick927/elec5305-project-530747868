@@ -49,6 +49,7 @@ python scripts/eval_mask.py
 # 6.Train DNN mask model 
 
 python scripts/train_mask.py
+python scripts/eval_dnn.py
 
 # Metrics
 We evaluate using:
