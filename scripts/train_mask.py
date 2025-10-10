@@ -44,7 +44,7 @@ assert mag_n_t.ndim == 3 and irm_t.ndim == 3, f"ndim wrong: {mag_n_t.ndim}, {irm
 assert mag_n_t.shape == irm_t.shape, f"shape mismatch: {mag_n_t.shape} vs {irm_t.shape}"
 
 # （5) Define the model (non-lazy build: pass in frequency dimension)
-in_dim = mag_n_t.shape[-1]   # 例如 513
+in_dim = mag_n_t.shape[-1]   # example 513
 model = MaskNet(in_dim=in_dim).to(device)
 
 criterion = nn.MSELoss()
