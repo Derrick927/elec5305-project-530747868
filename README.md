@@ -40,6 +40,7 @@ python scripts/smoke_test.py
 # 4.Run noise test
 
 python scripts/noise_test.py
+python scripts/eval_test.py
 
 # 5.Evaluate models
 
