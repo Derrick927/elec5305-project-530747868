@@ -25,7 +25,7 @@ speech-enhance-mask/
 
 # 1.Create a virtual environment
 
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate     # Mac/Linux
 .venv\Scripts\activate        # Windows
 
@@ -40,7 +40,6 @@ python scripts/smoke_test.py
 # 4.Run noise test
 
 python scripts/noise_test.py
-python scripts/eval_test.py
 
 # 5.Evaluate models
 

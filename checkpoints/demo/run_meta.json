@@ -1,0 +1,24 @@
+{
+  "mode": "on_the_fly",
+  "manifest_train": "manifests\\train.csv",
+  "manifest_val": "manifests\\val.csv",
+  "save_dir": "checkpoints\\demo",
+  "seed": 1337,
+  "snr_min": null,
+  "snr_max": null,
+  "snr_list": [
+    -5.0,
+    0.0,
+    5.0,
+    10.0
+  ],
+  "noise_filter": null,
+  "batch": 8,
+  "epochs": 2,
+  "lr": 0.001,
+  "workers": 0,
+  "in_dim": 513,
+  "train_pairs": 120,
+  "val_pairs": 30,
+  "device": "cpu"
+}

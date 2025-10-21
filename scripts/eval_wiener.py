@@ -23,9 +23,9 @@ def main():
     have_wiener = Path(WIENER).exists()
 
     print(">>> Evaluating ...")
-    m_noisy  = eval_pair(CLEAN, NOISY, SR)
-    m_wiener = eval_pair(CLEAN, WIENER, SR)   if have_wiener else None
-    m_sub    = eval_pair(CLEAN, SUBTRACT, SR) if have_sub    else None
+    m_noisy  = eval_pair(CLEAN, NOISY)
+    m_wiener = eval_pair(CLEAN, WIENER)   if have_wiener else None
+    m_sub    = eval_pair(CLEAN, SUBTRACT) if have_sub    else None
 
     print("[NOISY]   ", r(m_noisy))
     if m_wiener: print("[WIENER]  ", r(m_wiener))

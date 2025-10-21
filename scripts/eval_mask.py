@@ -23,13 +23,13 @@ def main():
 
     # collect available items
     items = []
-    items.append(("noisy",    eval_pair(CLEAN, NOISY, SR)))
+    items.append(("noisy",    eval_pair(CLEAN, NOISY)))
     if Path(WIENER).exists():
-        items.append(("wiener",   eval_pair(CLEAN, WIENER, SR)))
+        items.append(("wiener",   eval_pair(CLEAN, WIENER)))
     if Path(SUBTRACT).exists():
-        items.append(("subtract", eval_pair(CLEAN, SUBTRACT, SR)))
+        items.append(("subtract", eval_pair(CLEAN, SUBTRACT)))
     if Path(MASK_IRM).exists():
-        items.append(("mask_irm", eval_pair(CLEAN, MASK_IRM, SR)))
+        items.append(("mask_irm", eval_pair(CLEAN, MASK_IRM)))
 
     print(">>> Evaluating ...")
     for name, metrics in items:

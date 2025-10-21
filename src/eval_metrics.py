@@ -1,40 +1,75 @@
-# src/eval_metrics.py
+# -*- coding: utf-8 -*-
+"""
+Robust evaluation utilities for speech enhancement:
+- SNR (dB) using reference clean vs. test
+- PESQ (wideband, 16 kHz) with graceful fallback to NaN
+- STOI (0~1) with graceful fallback to NaN
+
+All audio is loaded via utils.load_wav(path, sr=target_sr) which returns
+a mono float waveform. No sample-rate value is returned.
+"""
+
+from __future__ import annotations
+from typing import Dict
 import numpy as np
-from pathlib import Path
-from src.utils import load_wav, snr_db
 
-# PESQ / STOI
-from pesq import pesq        # pip install pesq
-from pystoi.stoi import stoi # pip install pystoi
+from .utils import load_wav, snr_db
 
-SR = 16000
+# Optional deps
+try:
+    from pesq import pesq as pesq_api
+except Exception:
+    pesq_api = None
 
-def _align(a: np.ndarray, b: np.ndarray):
-    """Align two signals to the same length"""
+try:
+    from pystoi.stoi import stoi as stoi_api
+except Exception:
+    stoi_api = None
+
+
+def _align_length(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Trim both arrays to the same (minimum) length."""
     L = min(len(a), len(b))
     return a[:L], b[:L]
 
-def eval_pair(clean_path: str, test_path: str, sr: int, init_sr = SR):
+
+def eval_pair(clean_path: str, test_path: str, sr: int = 16000) -> Dict[str, float]:
     """
-    Pairwise evaluation (clean vs. test signal): compute SNR / PESQ / STOI
+    Evaluate a pair of waveforms (clean vs. test).
+    Returns a dict with keys: snr_db, pesq_wb, stoi
     """
-    c, _ = load_wav(clean_path, sr)
-    t, _ = load_wav(test_path, sr)
-    c, t = _align(c, t)
+    # Load and align
+    c = load_wav(clean_path, sr=sr)
+    t = load_wav(test_path, sr=sr)
+    c, t = _align_length(c, t)
 
     # SNR
-    snr = snr_db(c, t)
-
-    # PESQ (wideband 16 kHz). May sometimes throw errors due to amplitude/length mismatch.
     try:
-        pesq_wb = pesq(sr, c, t, 'wb')
+        snr = float(snr_db(c, t))
     except Exception:
-        pesq_wb = float('nan')
+        snr = float("nan")
 
-    # STOI (0~1)
-    try:
-        stoi_val = float(stoi(c, t, sr, extended=False))
-    except Exception:
-        stoi_val = float('nan')
+    # PESQ (wideband)
+    pesq_wb = float("nan")
+    if pesq_api is not None:
+        try:
+            # pesq package signature (0.0.4+): pesq(sr, ref, deg, mode)
+            pesq_wb = float(pesq_api(sr, c, t, "wb"))
+        except TypeError:
+            # In case of older/other signatures, try alternative call styles safely
+            try:
+                pesq_wb = float(pesq_api(c, t, sr))
+            except Exception:
+                pesq_wb = float("nan")
+        except Exception:
+            pesq_wb = float("nan")
 
-    return {"snr_db": float(snr), "pesq_wb": float(pesq_wb), "stoi": stoi_val}
+    # STOI
+    stoi_val = float("nan")
+    if stoi_api is not None:
+        try:
+            stoi_val = float(stoi_api(c, t, sr, extended=False))
+        except Exception:
+            stoi_val = float("nan")
+
+    return {"snr_db": snr, "pesq_wb": pesq_wb, "stoi": stoi_val}
