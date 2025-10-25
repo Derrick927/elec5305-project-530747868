@@ -1,8 +1,8 @@
 {
   "mode": "on_the_fly",
-  "manifest_train": "manifests\\train.csv",
-  "manifest_val": "manifests\\val.csv",
-  "save_dir": "checkpoints\\demo",
+  "manifest_train": "manifests/train.csv",
+  "manifest_val": "manifests/val.csv",
+  "save_dir": "checkpoints/demo",
   "seed": 1337,
   "snr_min": null,
   "snr_max": null,
@@ -14,11 +14,13 @@
   ],
   "noise_filter": null,
   "batch": 8,
-  "epochs": 2,
+  "epochs": 50,
   "lr": 0.001,
   "workers": 0,
   "in_dim": 513,
   "train_pairs": 120,
   "val_pairs": 30,
-  "device": "cpu"
+  "device": "cuda",
+  "early_stop_patience": 8,
+  "early_stop_delta": 0.001
 }

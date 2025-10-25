@@ -1,26 +1,41 @@
 # ELEC5305 Speech Enhancement Project
 
-This repository contains the implementation of a speech enhancement system using classical filters (Wiener, subtraction) and mask-based deep learning methods.
+This is a speech enhancement project featuring classical methods (spectral subtraction, Wiener, ideal masks) and a DNN mask model, plus STFT/ISTFT frontend, on-the-fly noisy datasets, objective metrics (SNR/PESQ/STOI) and visualizations.
 
 # Project Structure
-speech-enhance-mask/
-├── data/ # Folder for input/output audio
-│ ├── clean/ # Clean speech samples
-│ └── noisy/ # Noisy speech samples
-├── results/ # Enhanced and evaluation outputs
-├── scripts/ # Main scripts
-│ ├── smoke_test.py # Quick test script
-│ ├── noise_test.py # Add noise & run baseline
-│ ├── eval_wiener.py# Evaluate Wiener filter
-│ ├── eval_mask.py # Evaluate mask-based model
-│ └── train_mask.py # Train DNN mask model
-├── src/ # Source code
-│ ├── utils.py # Utility functions
-│ ├── stft.py # STFT/ISTFT functions
-│ ├── add_noise.py # Noise injection
-│ └── dnn_mask.py # MaskNet model
-├── requirements.txt # Python dependencies
-└── README.md # Project documentation
+.
+├─ src/                       # core modules
+│  ├─ add_noise.py            # white-noise injection
+│  ├─ dataset.py              # PairDataset(on_the_fly / pre_mixed)
+│  ├─ dnn_mask.py             # simple MLP mask net
+│  ├─ eval_metrics.py         # SNR、PESQ、STOI / objective metrics
+│  ├─ masking.py              # ideal ratio/binary masks
+│  ├─ stft.py                 # 16kHz, 25ms, 10ms, NFFT=1024
+│  ├─ utils.py                # audio utils
+│  └─ wiener.py               # Wiener filtering
+│
+├─ scripts/                   # experiment scripts
+│  ├─ smoke_test.py           # STFT↔ISTFT smoke test
+│  ├─ noise_test.py           # noise + subtraction
+│  ├─ wiener_test.py          # Wiener
+│  ├─ mask_test.py            # IRM masking
+│  ├─ eval_test.py            # basic eval
+│  ├─ eval_wiener.py          # Wiener eval
+│  ├─ eval_mask.py            # summary eval
+│  ├─ eval_dnn.py             # single-file DNN 
+│  ├─ eval_dnn_batch.py       # batch DNN eval
+│  ├─ train_mask.py           # train (50 epochs + early stop )
+│  ├─ plot_result.py          # plots
+│  └─ make_manifest.py        # manifest builder
+│
+├─ data/
+│  ├─ clean/                  # demo clean
+│  ├─ noisy/                  # generated noisy
+│  └─ public/                 # public subsets
+├─ manifests/                 # CSV manifests
+├─ checkpoints/               # checkpoints
+└─ results/                   # outputs & plots
+
 
 
 # 1.Create a virtual environment
