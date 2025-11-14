@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+
 """
 eval_dnn_batch.py
 Batch-evaluate a trained MaskNet checkpoint on many (clean,noisy) pairs.

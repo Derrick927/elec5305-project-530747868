@@ -22,9 +22,6 @@ from src.utils import load_wav, save_wav
 from src.stft import stft, istft, N_FFT
 
 
-# -----------------------------
-# Model helpers
-# -----------------------------
 def load_checkpoint(ckpt_path: str, device: torch.device) -> Tuple[Dict, Dict]:
     """Load checkpoint and return (state_dict, run_meta)."""
     obj = torch.load(ckpt_path, map_location=device)
