@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-eval_test.py
-Evaluate clean vs noisy and denoised wavs with SNR, PESQ (wb), and STOI.
-
-Usage:
-    python scripts/eval_test.py
-"""
-
 import sys
 import os
 import csv

@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-make_noisy_mirror.py — Create a mirrored noisy set with identical filenames.
-
-It reads all .wav files from --clean_dir, adds white noise at a target SNR,
-and writes them into --noisy_dir using the exact same filenames. This ensures
-eval_dnn_batch.py can pair files by stem (basename).
-
-Usage (PowerShell):
-  python scripts/make_noisy_mirror.py `
-    --clean_dir data/public/val_clean `
-    --noisy_dir data/public/val_noise `
-    --snr_db 0 `
-    --sr 16000
-"""
-
 import os
 import sys
 from pathlib import Path

@@ -51,4 +51,3 @@ def ideal_binary_mask(clean, noisy, thresh=0.5, eps=1e-12):
     mag_hat = M * np.abs(Y)
     X_hat = mag_hat * np.exp(1j * np.angle(Y))
     return istft(X_hat)
-

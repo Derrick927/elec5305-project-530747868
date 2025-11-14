@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-train_plot.py — Plot training/validation BCE curves from <save-dir>/train_log.csv
-
-Usage (PowerShell):
-  python scripts/train_plot.py --log checkpoints/demo/train_log.csv --out checkpoints/demo/train_curves.png
-"""
-
 import os, sys, csv
 from pathlib import Path
 import argparse

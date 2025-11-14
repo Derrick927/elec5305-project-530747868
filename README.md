@@ -102,6 +102,11 @@ python scripts/eval_dnn.py ^
   --outdir results ^
   --device auto
 
+python scripts/eval_dnn.py `
+    --ckpt checkpoints/demo/masknet_best.pt `
+    --clean data/clean/example.wav `
+    --noisy data/noisy/example_noisy.wav `
+    --outdir results
 
 
 output：

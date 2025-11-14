@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Robust evaluation utilities for speech enhancement:
-- SNR (dB) using reference clean vs. test
-- PESQ (wideband, 16 kHz) with graceful fallback to NaN
-- STOI (0~1) with graceful fallback to NaN
-
-All audio is loaded via utils.load_wav(path, sr=target_sr) which returns
-a mono float waveform. No sample-rate value is returned.
-"""
-
 from __future__ import annotations
 from typing import Dict
 import numpy as np

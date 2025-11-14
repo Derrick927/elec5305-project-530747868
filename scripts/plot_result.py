@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-plot_result.py — Auto-save all figures (waveform + spectrogram) for available audios.
-
-It looks for:
-  - data/clean/example.wav
-  - data/noisy/example_noisy.wav
-  - results/example_wiener.wav
-  - results/example_mask_irm.wav
-  - results/example_denoised.wav        (spectral subtraction)
-  - results/enhanced_from_ckpt.wav      (DNN single-file eval)
-  - results/enhanced/*.wav              (batch DNN eval outputs)
-
-Figures are saved under: results/plots/
-"""
-
 import os, sys
 from pathlib import Path
 import numpy as np

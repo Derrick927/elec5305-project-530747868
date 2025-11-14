@@ -1,24 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-eval_dnn.py  —  Full replacement (fixed device handling)
 
-Enhance a noisy wav using a trained MaskNet checkpoint, then evaluate
-SNR/PESQ/STOI and save a report together with the run's challenge conditions.
-
-Outputs:
-  - results/enhanced_from_ckpt.wav
-  - results/report.json
-  - results/report.csv
-
-Examples (PowerShell-safe):
-  python .\scripts\eval_dnn.py `
-    --ckpt "checkpoints\demo\masknet_best.pt" `
-    --clean "data\clean\example.wav" `
-    --noisy "data\noisy\example_noisy.wav" `
-    --outdir "results" `
-    --device auto
-"""
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 

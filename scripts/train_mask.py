@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os, math, json, argparse, random
 from pathlib import Path
 from typing import Optional, List
