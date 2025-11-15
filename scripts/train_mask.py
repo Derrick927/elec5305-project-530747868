@@ -36,8 +36,10 @@ def collate_pad(batch):
 
 def masked_bce_loss(pred, target, mask):
     bce = nn.BCELoss(reduction="none")
-    loss = bce(pred, target) * mask.unsqueeze(-1)
-    return loss.sum() / (mask.sum() + 1e-8)
+    loss = bce(pred, target) * mask.unsqueeze(-1)  # (B, T, F)
+    # 有效元素个数 = 有效帧数 × 频率 bins 数
+    valid_elems = mask.sum() * pred.size(-1)
+    return loss.sum() / (valid_elems + 1e-8)
 
 @torch.no_grad()
 def run_eval(model: nn.Module, loader: DataLoader, device: torch.device) -> float:

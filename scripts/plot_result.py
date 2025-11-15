@@ -1,33 +1,52 @@
-import os, sys
+import os
+import sys
 from pathlib import Path
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # headless save
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Make project root importable
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.utils import load_wav
-from src.stft import stft
+# ==========================================================
+#  PATH & IMPORT
+# ==========================================================
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+src_dir = project_root / "SRC"
 
-SR = 16000
-PLOTS_DIR = Path("results/plots")
+sys.path.insert(0, str(src_dir))
 
-CANDIDATES = [
-    ("clean",   Path("data/clean/example.wav")),
-    ("noisy",   Path("data/noisy/example_noisy.wav")),
-    ("wiener",  Path("results/example_wiener.wav")),
-    ("mask_irm",Path("results/example_mask_irm.wav")),
-    ("subtract",Path("results/example_denoised.wav")),
-    ("dnn_single", Path("results/enhanced_from_ckpt.wav")),
-]
+from utils import load_wav
+from stft import stft, SR
+
+
+# ==========================================================
+# CONFIG
+# ==========================================================
+PLOTS_DIR = project_root / "results" / "plots"
+DISPLAY_SEC = 2  # Waveform仅显示前2秒，更清晰
+DB_CLIP = (-80, 0)  # Spectrogram dB范围
+
 
 def ensure_dir(p: Path):
     p.mkdir(parents=True, exist_ok=True)
 
-def plot_wave(x: np.ndarray, title: str, save_path: Path):
+
+# ==========================================================
+# Util: Align audio lengths
+# ==========================================================
+def align_length(*waves):
+    """Cut all waves to the minimum length among them."""
+    L = min(len(w) for w in waves)
+    return [w[:L] for w in waves]
+
+
+# ==========================================================
+# Waveform plot
+# ==========================================================
+def plot_wave(x, title, save_path):
+    x = x[: DISPLAY_SEC * SR]  # 截取前2秒
     plt.figure(figsize=(12, 3))
-    plt.plot(x)
+    plt.plot(x, linewidth=0.8)
     plt.title(title)
     plt.xlabel("Samples")
     plt.ylabel("Amplitude")
@@ -35,9 +54,16 @@ def plot_wave(x: np.ndarray, title: str, save_path: Path):
     plt.savefig(save_path)
     plt.close()
 
-def plot_spec(x: np.ndarray, title: str, save_path: Path):
+
+# ==========================================================
+# Spectrogram plot
+# ==========================================================
+def plot_spec(x, title, save_path):
     X = stft(x)
-    db = 20 * np.log10(np.abs(X) + 1e-8)
+    mag = np.abs(X) + 1e-8
+    db = 20 * np.log10(mag)
+    db = np.clip(db, DB_CLIP[0], DB_CLIP[1])
+
     plt.figure(figsize=(12, 3))
     plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
     plt.colorbar(label="dB")
@@ -48,59 +74,134 @@ def plot_spec(x: np.ndarray, title: str, save_path: Path):
     plt.savefig(save_path)
     plt.close()
 
+
+# ==========================================================
+# Candidate list
+# ==========================================================
+def candidate_list():
+    return [
+        ("clean",  project_root / "data" / "clean" / "example.wav"),
+        ("noisy",  project_root / "data" / "noisy" / "example_noisy.wav"),
+        ("subtract", project_root / "results" / "example_denoised.wav"),
+        ("wiener",  project_root / "results" / "example_wiener.wav"),
+        ("irm",     project_root / "results" / "example_mask_irm.wav"),
+        ("dnn_single", project_root / "results" / "enhanced_from_ckpt.wav"),
+        ("unet",   project_root / "results_unet_new" / "enhanced_unet.wav"),
+    ]
+
+
+# ==========================================================
+# Main
+# ==========================================================
 def main():
     ensure_dir(PLOTS_DIR)
 
-    # 1) load known candidates
     loaded = []
-    for tag, p in CANDIDATES:
-        if p.exists():
-            wav = load_wav(str(p), sr=SR)
-            loaded.append((tag, p, wav))
+    for tag, fp in candidate_list():
+        if fp.exists():
+            wav = load_wav(str(fp), sr=SR)
+            loaded.append((tag, fp, wav))
 
-    # 2) load batch DNN outputs under results/enhanced/*.wav
-    enh_dir = Path("results/enhanced")
+    # 扫描 batch DNN outputs
+    enh_dir = project_root / "results" / "enhanced"
     if enh_dir.exists():
         for fp in sorted(enh_dir.glob("*.wav")):
             wav = load_wav(str(fp), sr=SR)
             loaded.append((f"dnn_batch:{fp.stem}", fp, wav))
 
     if not loaded:
-        print("[Warn] No audio found to plot. Please run demos/evaluations first.")
+        print("[WARN] No audio found.")
         return
 
-    # 3) save per-file plots
-    for tag, p, x in loaded:
+    # ====================================================
+    # 1) Per-file Wave + Spec
+    # ====================================================
+    for tag, fp, wav in loaded:
         wave_png = PLOTS_DIR / f"{tag}_wave.png"
         spec_png = PLOTS_DIR / f"{tag}_spec.png"
-        plot_wave(x, f"{tag} — Waveform", wave_png)
-        plot_spec(x, f"{tag} — Spectrogram", spec_png)
+        plot_wave(wav, f"{tag} — Waveform", wave_png)
+        plot_spec(wav, f"{tag} — Spectrogram", spec_png)
         print(f"[Saved] {wave_png.name}, {spec_png.name}")
 
-    # 4) if both clean & noisy exist, draw a compact comparison panel
+    # ====================================================
+    # 2) Clean / Noisy / DNN 对比
+    # ====================================================
     clean = next((x for x in loaded if x[0] == "clean"), None)
     noisy = next((x for x in loaded if x[0] == "noisy"), None)
-    dnn_single = next((x for x in loaded if x[0] == "dnn_single"), None)
-    if clean and noisy and dnn_single:
-        # waveform comparison
+    dnn = next((x for x in loaded if x[0] == "dnn_single"), None)
+
+    if clean and noisy and dnn:
+        _, _, c = clean
+        _, _, n = noisy
+        _, _, d = dnn
+
+        c, n, d = align_length(c, n, d)
+
+        # waveform
         plt.figure(figsize=(12, 6))
-        for i, (tag, _, wav) in enumerate([clean, noisy, dnn_single], 1):
-            plt.subplot(3, 1, i); plt.plot(wav); plt.title(f"{tag} — Waveform")
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("dnn", d)], start=1):
+            plt.subplot(3, 1, i)
+            plt.plot(wav[:DISPLAY_SEC * SR])
+            plt.title(f"{tag} — Waveform")
         plt.tight_layout()
         out = PLOTS_DIR / "compare_wave_clean_noisy_dnn.png"
-        plt.savefig(out); plt.close(); print(f"[Saved] {out.name}")
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
 
-        # spectrogram comparison
+        # spec
         plt.figure(figsize=(12, 6))
-        for i, (tag, _, wav) in enumerate([clean, noisy, dnn_single], 1):
-            X = stft(wav); db = 20*np.log10(np.abs(X)+1e-8)
-            plt.subplot(3, 1, i); plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("dnn", d)], start=1):
+            X = stft(wav)
+            mag = np.abs(X)+1e-8
+            db = 20*np.log10(mag)
+            db = np.clip(db, DB_CLIP[0], DB_CLIP[1])
+            plt.subplot(3, 1, i)
+            plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
             plt.title(f"{tag} — Spectrogram")
         plt.tight_layout()
         out = PLOTS_DIR / "compare_spec_clean_noisy_dnn.png"
-        plt.savefig(out); plt.close(); print(f"[Saved] {out.name}")
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
 
-    print(f"[Done] All figures saved under: {PLOTS_DIR.resolve()}")
+    # ====================================================
+    # 3) Clean / Noisy / UNet 对比
+    # ====================================================
+    unet = next((x for x in loaded if x[0] == "unet"), None)
+
+    if clean and noisy and unet:
+        _, _, c = clean
+        _, _, n = noisy
+        _, _, u = unet
+
+        c, n, u = align_length(c, n, u)
+
+        # waveform
+        plt.figure(figsize=(12, 6))
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("unet", u)], start=1):
+            plt.subplot(3, 1, i)
+            plt.plot(wav[:DISPLAY_SEC * SR])
+            plt.title(f"{tag} — Waveform")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_wave_clean_noisy_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+        # spectrogram
+        plt.figure(figsize=(12, 6))
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("unet", u)], start=1):
+            X = stft(wav)
+            db = 20*np.log10(np.abs(X)+1e-8)
+            db = np.clip(db, DB_CLIP[0], DB_CLIP[1])
+            plt.subplot(3, 1, i)
+            plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
+            plt.title(f"{tag} — Spectrogram")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_spec_clean_noisy_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+    print(f"\n[Done] All figures saved to: {PLOTS_DIR.resolve()}")
+
 
 if __name__ == "__main__":
     main()

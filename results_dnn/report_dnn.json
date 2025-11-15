@@ -1,0 +1,16 @@
+{
+  "checkpoint": "checkpoints/dnn/masknet_best.pt",
+  "sr": 16000,
+  "metrics": {
+    "noisy": {
+      "snr_db": 0.02429591673483883,
+      "pesq_wb": 1.0514447689056396,
+      "stoi": 0.7643226956656946
+    },
+    "enhanced": {
+      "snr_db": 2.2661106406755747,
+      "pesq_wb": 1.0493963956832886,
+      "stoi": 0.7639331268278701
+    }
+  }
+}
