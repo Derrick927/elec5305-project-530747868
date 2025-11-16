@@ -110,7 +110,8 @@ class PairDataset:
                  snr_max: Optional[float] = None,
                  snr_list: Optional[List[float]] = None,
                  noise_filter: Optional[str] = None,
-                 seed: int = 1337):
+                 seed: int = 1337,
+                 fixed_snr: Optional[float] = None):
         """
         Args:
             manifest_csv: CSV file path.
@@ -120,6 +121,7 @@ class PairDataset:
             snr_list: if provided, choose SNR from this list (overrides min/max).
             noise_filter: substring or regex to select noise files (on_the_fly).
             seed: random seed for reproducible on_the_fly mixing.
+            fixed_snr: if provided, use this fixed SNR for all samples (useful for validation).
         """
         self.mode = mode
         self.sr = int(sr)
@@ -127,6 +129,7 @@ class PairDataset:
         self.snr_max = snr_max
         self.snr_list = list(snr_list) if snr_list else None
         self.noise_filter = noise_filter
+        self.fixed_snr = fixed_snr
         self.rng = random.Random(int(seed))
 
         self.pairs = _read_csv_pairs(manifest_csv)
@@ -151,7 +154,10 @@ class PairDataset:
             clean = load_wav(a, sr=self.sr)  # (L,)
             noise = load_wav(b, sr=self.sr)  # (L2,)
 
-            snr = _choose_snr(self.snr_min, self.snr_max, self.snr_list, self.rng)
+            if self.fixed_snr is not None:
+                snr = self.fixed_snr
+            else:
+                snr = _choose_snr(self.snr_min, self.snr_max, self.snr_list, self.rng)
             x = _mix_at_snr(clean, noise, snr_db=snr)
 
             Y = stft(x)           # (F, T) complex
@@ -161,8 +167,8 @@ class PairDataset:
             mag_clean = np.abs(S)   # (F, T)
             mag_noise = np.maximum(mag_noisy - mag_clean, 0.0)
 
-            irm_TF = _compute_irm(mag_clean, mag_noise)   # (T, F)
-            feats_TF = mag_noisy.T.astype(np.float32)     # (T, F)
+            irm_TF = _compute_irm(mag_clean, mag_noise)
+            feats_TF = mag_noisy.T.astype(np.float32)
 
             return feats_TF, irm_TF
 

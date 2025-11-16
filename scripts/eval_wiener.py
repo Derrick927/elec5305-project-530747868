@@ -13,7 +13,7 @@ SUBTRACT  = "results/example_denoised.wav"   # Spectral subtraction result (opti
 WIENER    = "results/example_wiener.wav"     # Wiener result (optional)
 
 def r(d):  # round helper
-    return {k: (round(v, 4) if v == v else v) for k, v in d.items()}  # v==v 过滤 NaN
+    return {k: (round(v, 4) if v == v else v) for k, v in d.items()}
 
 def main():
     # --- check inputs ---

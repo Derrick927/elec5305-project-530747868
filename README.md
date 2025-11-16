@@ -1,143 +1,243 @@
 # ELEC5305 Speech Enhancement Project
 
-This is a speech enhancement project featuring classical methods (spectral subtraction, Wiener, ideal masks) and a DNN mask model, plus STFT/ISTFT frontend, on-the-fly noisy datasets, objective metrics (SNR/PESQ/STOI) and visualizations.
+Speech enhancement project with classical methods (spectral subtraction, Wiener filtering, IRM) and deep learning models (ImprovedMaskNet, UNet). Features STFT/ISTFT frontend, on-the-fly mixing, objective metrics (SNR/PESQ/STOI), and visualizations.
 
-# Project Structure
-.
-├─ src/ # core modules
-│ ├─ add_noise.py # white-noise injection
-│ ├─ dataset.py # PairDataset(on_the_fly / pre_mixed)
-│ ├─ dnn_mask.py # simple MLP mask net
-│ ├─ eval_metrics.py # SNR、PESQ、STOI / objective metrics
-│ ├─ masking.py # ideal ratio/binary masks
-│ ├─ stft.py # 16kHz, 25ms, 10ms, NFFT=1024
-│ ├─ utils.py # audio utils
-│ └─ wiener.py # Wiener filtering
-│
-├─ scripts/ # experiment scripts
-│ ├─ smoke_test.py # STFT↔ISTFT smoke test
-│ ├─ noise_test.py # noise + subtraction
-│ ├─ wiener_test.py # Wiener
-│ ├─ mask_test.py # IRM masking
-│ ├─ eval_test.py # basic eval
-│ ├─ eval_wiener.py # Wiener eval
-│ ├─ eval_mask.py # summary eval
-│ ├─ eval_dnn.py # single-file DNN
-│ ├─ eval_dnn_batch.py # batch DNN eval
-│ ├─ train_mask.py # train (50 epochs + early stop)
-│ ├─ plot_result.py # plots
-│ └─ make_manifest.py # manifest builder
-│
-├─ data/
-│ ├─ clean/ # demo clean
-│ ├─ noisy/ # generated noisy
-│ └─ public/ # public subsets
-├─ manifests/ # CSV manifests
-├─ checkpoints/ # checkpoints
-└─ results/ # outputs & plots 
+## Features
 
+- **Classical Methods**: Spectral subtraction, Wiener filtering, Ideal Ratio Mask (IRM)
+- **Deep Learning**: ImprovedMaskNet (LSTM-based) and UNet
+- **Training**: Learning rate scheduling, early stopping, gradient clipping, AMP support
+- **Evaluation**: SNR, PESQ, STOI metrics and visualization tools
 
-Step 1. Create a virtual environment
+## Installation
+
+```powershell
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate      # macOS/Linux  
-.venv\Scripts\activate         # Windows  
+.venv\Scripts\activate
 
-Step 2. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-
-Windows 用户如需 GPU 训练，请安装对应 CUDA 版本的 PyTorch：
-
+# Install PyTorch (GPU support, CUDA 11.8)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
 
+## Data Preparation
 
-macOS 用户默认使用 CPU，如为 M1/M2 芯片可开启 Metal 加速：
+### 0. Smoke Test (Verify STFT/ISTFT)
 
-pip install torch torchvision torchaudio
-
-1. Run smoke test / 验证环境
+```powershell
 python scripts/smoke_test.py
+```
 
-2. Run noise test / 生成加噪音频
+Verifies STFT/ISTFT reconstruction. Output: `results/smoke_recon.wav`
+
+### 1. Resample Audio to 16kHz
+
+```powershell
+python scripts/resample_all.py
+```
+
+Resamples audio from `data/public/` to `data16/` at 16kHz.
+
+### 2. Generate Manifests
+
+**On-the-fly mixing (recommended):**
+```powershell
+python scripts/make_manifest.py `
+  --mode on_the_fly `
+  --clean_dir data16/train_clean `
+  --noise_dir data16/noise `
+  --pairs_per_clean 3 `
+  --out_train manifests/train.csv `
+  --val_clean_dir data16/val_clean `
+  --val_noise_dir data16/noise `
+  --out_val manifests/val.csv
+```
+
+**Pre-mixed data:**
+```powershell
+python scripts/make_manifest.py `
+  --mode pre_mixed `
+  --clean_dir data16/train_clean `
+  --noisy_dir data16/train_noisy `
+  --out_train manifests/train.csv `
+  --val_clean_dir data16/val_clean `
+  --val_noisy_dir data16/val_noisy `
+  --out_val manifests/val.csv
+```
+
+## Classical Methods
+
+### Spectral Subtraction
+```powershell
 python scripts/noise_test.py
+```
+Output: `data/noisy/example_noisy.wav`, `results/example_denoised.wav`
 
+### Wiener Filtering
+```powershell
+python scripts/wiener_test.py
+```
+Output: `results/example_wiener.wav`
 
-执行后将在 results/ 目录下生成加噪与去噪结果。
+### Ideal Ratio Mask (IRM)
+```powershell
+python scripts/mask_test.py
+```
+Output: `results/example_mask_irm.wav`
 
-3. Evaluate models / 传统方法评估
+### Evaluate Classical Methods
+```powershell
 python scripts/eval_wiener.py
 python scripts/eval_mask.py
+```
+Output: `results/metrics.csv`
 
+## Deep Learning Models
 
-对比 Wiener 与 IRM 方法的增强效果，输出 PESQ/STOI 指标。
+### Train ImprovedMaskNet
 
-4. Train DNN mask model / 训练掩蔽网络
-python scripts/train_mask.py ^
-  --manifest-train manifests/train.csv ^
-  --manifest-val manifests/val.csv ^
-  --mode_on_the_fly ^
-  --snr-list -5 0 5 10 ^
-  --batch 8 ^
-  --epochs 50 ^
-  --lr 1e-3 ^
-  --workers 0 ^
-  --save-dir checkpoints/demo ^
-  --seed 1337 ^
-  --device cuda
-
-
-训练结果：
-
-masknet_best.pt（验证集最优）
-
-masknet_last.pt（最后一轮）
-
-train_log.csv（训练日志，记录 BCE 损失）
-
-5. Evaluate DNN model / 模型推理评估
-python scripts/eval_dnn.py ^
-  --ckpt checkpoints/demo/masknet_best.pt ^
-  --clean data/clean/example.wav ^
-  --noisy data/noisy/example_noisy.wav ^
-  --outdir results ^
+```powershell
+python scripts/train_mask_improved.py `
+  --manifest-train manifests/train.csv `
+  --manifest-val manifests/val.csv `
+  --mode pre_mixed `
+  --model-type improved `
+  --use-log `
+  --batch 32 `
+  --epochs 30 `
+  --lr 3e-3 `
+  --save-dir checkpoints/improved_gpu `
+  --amp `
   --device auto
+```
 
+**Key parameters:**
+- `--mode pre_mixed`: Faster data loading (recommended)
+- `--use-log`: Use log magnitude spectrogram (recommended)
+- `--amp`: Enable Automatic Mixed Precision for faster GPU training
+
+**Outputs:**
+- `masknet_best.pt`: Best model checkpoint
+- `train_log.csv`: Training logs
+
+### Train UNet
+
+```powershell
+python scripts/train_unet.py `
+  --manifest-train manifests/train.csv `
+  --manifest-val manifests/val.csv `
+  --save-dir checkpoints/unet `
+  --epochs 30 `
+  --batch 32 `
+  --lr 2e-3 `
+  --device auto
+```
+
+**Outputs:**
+- `unet_best.pt`: Best model checkpoint
+- `train_log_unet.csv`: Training logs
+
+## Model Evaluation
+
+### Evaluate ImprovedMaskNet
+
+**Single file:**
+```powershell
 python scripts/eval_dnn.py `
-    --ckpt checkpoints/demo/masknet_best.pt `
-    --clean data/clean/example.wav `
-    --noisy data/noisy/example_noisy.wav `
-    --outdir results
+  --ckpt checkpoints/improved_gpu/masknet_best.pt `
+  --clean data/clean/example.wav `
+  --noisy data/noisy/example_noisy.wav `
+  --outdir results `
+  --device auto
+```
 
+**Batch evaluation:**
+```powershell
+python scripts/eval_dnn_batch.py `
+  --ckpt checkpoints/improved_gpu/masknet_best.pt `
+  --manifest manifests/val.csv `
+  --outdir results/batch `
+  --device auto
+```
 
-output：
+**Outputs:** `enhanced_from_ckpt.wav`, `report.csv`
 
-enhanced_from_ckpt.wav: Enhanced speech
-report.csv / report.json：Indicator Report
+### Evaluate UNet
 
-6. Plot results /Plotting waveforms and spectrum diagrams
+**Single evaluation:**
+```powershell
+python scripts/eval_unet.py `
+  --ckpt checkpoints/unet/unet_best.pt `
+  --clean data/clean/example.wav `
+  --noisy data/noisy/example_noisy.wav `
+  --outdir results_unet_new `
+  --device auto
+```
+
+**Outputs:** `enhanced_unet.wav`, `metrics_unet.csv`
+
+**Batch evaluation:**
+```powershell
+python scripts/eval_unet_batch.py `
+  --ckpt checkpoints/unet/unet_best.pt `
+  --manifest manifests/val.csv `
+  --outdir results/unet_batch `
+  --device auto
+```
+
+**Outputs:** `enhanced/<stem>_enh.wav`, `all_reports.csv`, `all_reports.json`
+
+## Visualization
+
+### Plot Training Curves
+
+**ImprovedMaskNet:**
+```powershell
+python scripts/train_plot.py `
+  --log checkpoints/improved_gpu/train_log.csv `
+  --out checkpoints/improved_gpu/train_curves.png
+```
+
+**UNet:**
+```powershell
+python scripts/train_plot_unet.py `
+  --log checkpoints/unet/train_log_unet.csv `
+  --out checkpoints/unet/train_curves_unet.png
+```
+
+**Compare models:**
+```powershell
+python scripts/plot_unet_vs_dnn.py `
+  --dnn-log checkpoints/improved_gpu/train_log.csv `
+  --unet-log checkpoints/unet/train_log_unet.csv `
+  --out results/train_curve_unet_vs_dnn.png
+```
+
+### Visualize Enhancement Results
+
+```powershell
 python scripts/plot_result.py
+```
 
-Automatically generate waveforms and spectra of all enhancement results and save them to [location]：
-results/plots/
+Generates waveform and spectrogram plots for all methods, including comparison plots (Clean/Noisy/DNN/UNet). Outputs saved to `results/plots/`.
 
-7. Plot training curves / Plotting training curves
-python scripts/train_plot.py \
-  --log checkpoints/demo/train_log.csv \
-  --out checkpoints/demo/train_curves.png
+## Metrics
 
-Output: Training and validation BCE loss curves.
+- **SNR (dB)**: Signal-to-noise ratio
+- **PESQ**: Perceptual evaluation of speech quality (range: -0.5 to 4.5)
+- **STOI**: Short-time objective intelligibility (range: 0 to 1)
 
-Metrics
+Higher values indicate better enhancement quality.
 
-We evaluate using:
+## Additional Resources
 
-SNR (dB) – Signal-to-noise ratio
+- `IMPROVEMENTS.md`: Detailed explanation of MaskNet improvements
+- `COLAB_SETUP.md`: Guide for training in Google Colab
 
-PESQ – Perceptual evaluation of speech quality
+## Author
 
-STOI – Short-time objective intelligibility
-
-# Author
-
-Project for ELEC5305 Speech Processing, University of Sydney.
+Project for ELEC5305 Speech Processing, University of Sydney.  
 Maintainer: Zechen Li

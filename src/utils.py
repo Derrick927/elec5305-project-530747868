@@ -1,5 +1,10 @@
+import warnings
 import numpy as np
 import soundfile as sf
+
+warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+
 import librosa
 
 def load_wav(path: str, sr: int = None):

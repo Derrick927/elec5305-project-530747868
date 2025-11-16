@@ -1,4 +1,9 @@
+import warnings
 import numpy as np
+
+warnings.filterwarnings("ignore", category=UserWarning, module="librosa")
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+
 import librosa
 
 SR = 16000

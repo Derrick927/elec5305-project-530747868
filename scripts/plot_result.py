@@ -23,8 +23,8 @@ from stft import stft, SR
 # CONFIG
 # ==========================================================
 PLOTS_DIR = project_root / "results" / "plots"
-DISPLAY_SEC = 2  # Waveform仅显示前2秒，更清晰
-DB_CLIP = (-80, 0)  # Spectrogram dB范围
+DISPLAY_SEC = 2
+DB_CLIP = (-80, 0)
 
 
 def ensure_dir(p: Path):
@@ -44,7 +44,7 @@ def align_length(*waves):
 # Waveform plot
 # ==========================================================
 def plot_wave(x, title, save_path):
-    x = x[: DISPLAY_SEC * SR]  # 截取前2秒
+    x = x[: DISPLAY_SEC * SR]
     plt.figure(figsize=(12, 3))
     plt.plot(x, linewidth=0.8)
     plt.title(title)
@@ -102,7 +102,6 @@ def main():
             wav = load_wav(str(fp), sr=SR)
             loaded.append((tag, fp, wav))
 
-    # 扫描 batch DNN outputs
     enh_dir = project_root / "results" / "enhanced"
     if enh_dir.exists():
         for fp in sorted(enh_dir.glob("*.wav")):
@@ -123,8 +122,6 @@ def main():
         plot_spec(wav, f"{tag} — Spectrogram", spec_png)
         print(f"[Saved] {wave_png.name}, {spec_png.name}")
 
-    # ====================================================
-    # 2) Clean / Noisy / DNN 对比
     # ====================================================
     clean = next((x for x in loaded if x[0] == "clean"), None)
     noisy = next((x for x in loaded if x[0] == "noisy"), None)
@@ -164,8 +161,6 @@ def main():
         print(f"[Saved] {out.name}")
 
     # ====================================================
-    # 3) Clean / Noisy / UNet 对比
-    # ====================================================
     unet = next((x for x in loaded if x[0] == "unet"), None)
 
     if clean and noisy and unet:
@@ -197,6 +192,71 @@ def main():
             plt.title(f"{tag} — Spectrogram")
         plt.tight_layout()
         out = PLOTS_DIR / "compare_spec_clean_noisy_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+    # ====================================================
+    if clean and noisy and dnn and unet:
+        _, _, c = clean
+        _, _, n = noisy
+        _, _, d = dnn
+        _, _, u = unet
+
+        c, n, d, u = align_length(c, n, d, u)
+
+        # waveform
+        plt.figure(figsize=(12, 8))
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("dnn", d), ("unet", u)], start=1):
+            plt.subplot(4, 1, i)
+            plt.plot(wav[:DISPLAY_SEC * SR])
+            plt.title(f"{tag} — Waveform")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_wave_clean_noisy_dnn_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+        # spectrogram
+        plt.figure(figsize=(12, 8))
+        for i, (tag, wav) in enumerate([("clean", c), ("noisy", n), ("dnn", d), ("unet", u)], start=1):
+            X = stft(wav)
+            db = 20*np.log10(np.abs(X)+1e-8)
+            db = np.clip(db, DB_CLIP[0], DB_CLIP[1])
+            plt.subplot(4, 1, i)
+            plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
+            plt.title(f"{tag} — Spectrogram")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_spec_clean_noisy_dnn_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+    # ====================================================
+    if dnn and unet:
+        _, _, d = dnn
+        _, _, u = unet
+        d, u = align_length(d, u)
+
+        # waveform
+        plt.figure(figsize=(12, 4))
+        for i, (tag, wav) in enumerate([("dnn", d), ("unet", u)], start=1):
+            plt.subplot(2, 1, i)
+            plt.plot(wav[:DISPLAY_SEC * SR])
+            plt.title(f"{tag} — Waveform")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_wave_dnn_vs_unet.png"
+        plt.savefig(out); plt.close()
+        print(f"[Saved] {out.name}")
+
+        # spectrogram
+        plt.figure(figsize=(12, 4))
+        for i, (tag, wav) in enumerate([("dnn", d), ("unet", u)], start=1):
+            X = stft(wav)
+            db = 20*np.log10(np.abs(X)+1e-8)
+            db = np.clip(db, DB_CLIP[0], DB_CLIP[1])
+            plt.subplot(2, 1, i)
+            plt.imshow(db, aspect="auto", origin="lower", cmap="magma")
+            plt.title(f"{tag} — Spectrogram")
+        plt.tight_layout()
+        out = PLOTS_DIR / "compare_spec_dnn_vs_unet.png"
         plt.savefig(out); plt.close()
         print(f"[Saved] {out.name}")
 

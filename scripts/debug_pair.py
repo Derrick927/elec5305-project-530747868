@@ -19,29 +19,25 @@ def main():
 
     print(f"[Info] Dataset length = {len(ds)}")
 
-    # 取前 5 条，逐条检查
     for i in range(5):
         print("\n=======================")
         print(f"Sample #{i}")
         print("=======================")
 
-        noisy_T, irm_T = ds[i]  # noisy_mag, irm_mag  (T, F)
+        noisy_T, irm_T = ds[i]
         print(f"noisy_T shape = {noisy_T.shape}")
         print(f"irm_T   shape = {irm_T.shape}")
 
-        # 基本数值检查
         print(f"noisy_T min/max = {noisy_T.min():.4f} / {noisy_T.max():.4f}")
         print(f"irm_T   min/max = {irm_T.min():.4f} / {irm_T.max():.4f}")
 
-        # 检查 IRM 是否在 0~1
         if irm_T.min() < 0 or irm_T.max() > 1:
-            print("⚠️  IRM 掩蔽不在 [0,1] 范围内 —— 有重大问题！")
+            print("[Warning] IRM mask not in [0,1] range - potential issue!")
 
-        # 检查长度
         if noisy_T.shape != irm_T.shape:
-            print("⚠️  特征和标签 shape 不一致 —— 非常错误！")
+            print("[Error] Feature and label shapes do not match!")
 
-    print("\n[Done] Debug 完成，请查看输出判断问题。")
+    print("\n[Done] Debug complete, check output for issues.")
 
 
 if __name__ == "__main__":

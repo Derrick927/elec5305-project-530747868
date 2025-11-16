@@ -26,8 +26,10 @@ import torch
 
 # project imports
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.dnn_mask import MaskNet
+current_dir = os.path.dirname(os.path.abspath(__file__))   # ...\speech-enhance-mask\scripts
+project_root = os.path.dirname(current_dir)                # ...\speech-enhance-mask
+sys.path.insert(0, project_root)
+from src.dnn_mask_improved import MaskNet, ImprovedMaskNet, DeepMaskNet
 from src.eval_metrics import eval_pair
 from src.utils import load_wav, save_wav
 from src.stft import stft, istft, N_FFT
@@ -43,26 +45,68 @@ def load_checkpoint(ckpt_path: str, device: torch.device):
     return state_dict, run_meta
 
 def build_model_from_meta(run_meta: dict, device: torch.device):
+    """Build model based on run_meta"""
+    model_type = run_meta.get("model_type", "original")
+    use_log = run_meta.get("use_log", False)
     in_dim = run_meta.get("in_dim", N_FFT // 2 + 1)
-    model = MaskNet(in_dim=in_dim).to(device)
+    
+    if model_type == "improved":
+        hidden_dim = run_meta.get("hidden_dim", 512)
+        num_layers = run_meta.get("num_layers", 2)
+        dropout = run_meta.get("dropout", 0.2)
+        model = ImprovedMaskNet(in_dim=in_dim, hidden_dim=hidden_dim,
+                               num_layers=num_layers, use_log=use_log,
+                               dropout=dropout).to(device)
+    elif model_type == "deep":
+        hidden_dims = run_meta.get("hidden_dims", [512, 512, 256, 256])
+        dropout = run_meta.get("dropout", 0.3)
+        model = DeepMaskNet(in_dim=in_dim, hidden_dims=hidden_dims,
+                           dropout=dropout, use_log=use_log).to(device)
+    else:  # original
+        model = MaskNet(in_dim=in_dim).to(device)
+    
     return model
 
 @torch.no_grad()
-def enhance_with_model(model: torch.nn.Module, noisy_wav: np.ndarray) -> np.ndarray:
+def enhance_with_model(model: torch.nn.Module, noisy_wav: np.ndarray, device: torch.device = None) -> np.ndarray:
+    """
+    Enhance noisy audio using model
+    
+    Args:
+        model: MaskNet, ImprovedMaskNet, or DeepMaskNet
+        noisy_wav: Noisy audio waveform
+        device: Inference device (if None, use model's current device)
+    """
+    if device is None:
+        device = next(model.parameters()).device
+    model = model.to(device)
     model.eval()
-    Y = stft(noisy_wav)                        # (F,T) complex
-    mag_noisy = np.abs(Y).T.astype(np.float32) # (T,F)
-    feats = torch.from_numpy(mag_noisy)[None, ...]  # (1,T,F)
-    preds = model(feats).cpu().numpy()[0]           # (T,F) in [0,1]
-    M = preds.T                                     # (F,T)
-    S_mag_hat = np.abs(Y) * M
-    phase = np.exp(1j * np.angle(Y))
-    S_hat = S_mag_hat * phase
-    enh = istft(S_hat).astype(np.float32)
-    mx = float(np.max(np.abs(enh)) + 1e-12)
+    
+    Y = stft(noisy_wav)
+    mag_noisy = np.abs(Y)
+    phase_noisy = np.angle(Y)
+    
+    feats_TF = mag_noisy.T.astype(np.float32)
+    
+    inp = torch.from_numpy(feats_TF).unsqueeze(0).to(device)
+    pred_TF = model(inp).squeeze(0).cpu().numpy()
+    
+    mask_FT = pred_TF.T
+    mask_FT = np.clip(mask_FT, 0.0, 1.0)
+    
+    mask_FT = 0.7 * mask_FT + 0.3
+    mask_FT = np.clip(mask_FT, 0.3, 1.0)
+    
+    enh_mag = mag_noisy * mask_FT
+    
+    enh_S = enh_mag * np.exp(1j * phase_noisy)
+    enh_wav = istft(enh_S).astype(np.float32)
+    
+    mx = float(np.max(np.abs(enh_wav)) + 1e-12)
     if mx > 1.0:
-        enh = enh / mx
-    return enh
+        enh_wav = enh_wav / mx
+    
+    return enh_wav
 
 
 # -----------------------------
@@ -102,6 +146,7 @@ def parse_args():
     ap.add_argument("--ckpt", type=str, required=True, help="Path to checkpoint *.pt")
     # input options
     ap.add_argument("--pairs-csv", type=str, default="", help="CSV with clean,noisy per line")
+    ap.add_argument("--manifest", type=str, default="", dest="manifest", help="Alias for --pairs-csv (CSV with clean,noisy per line)")
     ap.add_argument("--clean-dir", type=str, default="", help="Folder of clean wavs")
     ap.add_argument("--noisy-dir", type=str, default="", help="Folder of noisy wavs")
     ap.add_argument("--limit", type=int, default=0, help="Evaluate at most N pairs (0 = all)")
@@ -127,10 +172,11 @@ def main():
     enh_dir.mkdir(parents=True, exist_ok=True)
 
     # gather pairs
-    if args.pairs_csv:
-        pairs = read_pairs_from_csv(args.pairs_csv)
+    pairs_csv = args.manifest or args.pairs_csv
+    if pairs_csv:
+        pairs = read_pairs_from_csv(pairs_csv)
     else:
-        assert args.clean_dir and args.noisy_dir, "Use --pairs-csv or (--clean-dir AND --noisy-dir)."
+        assert args.clean_dir and args.noisy_dir, "Use --manifest/--pairs-csv or (--clean-dir AND --noisy-dir)."
         pairs = pair_by_stem(args.clean_dir, args.noisy_dir)
 
     if args.limit and args.limit > 0:
@@ -149,7 +195,7 @@ def main():
             clean = load_wav(str(cp), sr=args.sr)
             noisy = load_wav(str(np_), sr=args.sr)
             # enhance
-            enhanced = enhance_with_model(model, noisy)
+            enhanced = enhance_with_model(model, noisy, device=device)
             enh_path = enh_dir / f"{cp.stem}_enh.wav"
             save_wav(enhanced, str(enh_path), sr=args.sr)
 

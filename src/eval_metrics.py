@@ -2,10 +2,8 @@ from __future__ import annotations
 from typing import Dict
 import numpy as np
 
-# 修复导入
-from utils import load_wav, snr_db
+from .utils import load_wav, snr_db
 
-# Optional deps
 try:
     from pesq import pesq as pesq_api
 except Exception:
@@ -17,17 +15,11 @@ except Exception:
     stoi_api = None
 
 
-# -------------------------------
-# 对齐音频长度
-# -------------------------------
 def _align_length(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     L = min(len(a), len(b))
     return a[:L], b[:L]
 
 
-# -------------------------------
-# 单独的指标计算函数（eval_unet.py 需要）
-# -------------------------------
 def compute_snr(clean: np.ndarray, test: np.ndarray) -> float:
     """Compute SNR between clean and test signals"""
     try:
@@ -61,9 +53,6 @@ def compute_stoi(clean: np.ndarray, test: np.ndarray, sr: int = 16000) -> float:
         return float("nan")
 
 
-# -------------------------------
-# 原版复合评估接口（保持不变）
-# -------------------------------
 def eval_pair(clean_path: str, test_path: str, sr: int = 16000) -> Dict[str, float]:
     """
     Evaluate a pair of waveforms (clean vs. test).
