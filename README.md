@@ -1,6 +1,6 @@
-# ELEC5305 Speech Enhancement Project
+# A Single-Channel Speech Enhancement System Based on Masking Estimation and Deep Networks
 
-Speech enhancement project with classical methods (spectral subtraction, Wiener filtering, IRM) and deep learning models (ImprovedMaskNet, UNet). Features STFT/ISTFT frontend, on-the-fly mixing, objective metrics (SNR/PESQ/STOI), and visualizations.
+A comprehensive speech enhancement system implementing both classical methods (spectral subtraction, Wiener filtering, Ideal Ratio Mask) and deep learning models (ImprovedMaskNet, UNet) for single-channel speech enhancement. Features STFT/ISTFT frontend, on-the-fly mixing, objective metrics (SNR/PESQ/STOI), and visualization tools.
 
 ## Features
 
